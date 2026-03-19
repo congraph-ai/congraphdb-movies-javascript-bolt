@@ -1,0 +1,22 @@
+# dependencies
+node_modules
+bower_components
+
+# database files
+*.cgraph
+*.wal
+
+# environment
+.env
+.env.local
+
+# build files
+build
+
+# IDE files
+.idea
+.vscode
+
+# misc
+.DS_Store
+npm-debug.log
