@@ -2,11 +2,12 @@
  * CongraphDB Movies Database Seeder
  *
  * Initializes the CongraphDB with the sample movies dataset.
+ * Uses raw Cypher queries for better compatibility.
  */
 
 'use strict';
 
-const { Database, CongraphDBAPI } = require('congraphdb');
+const { Database } = require('congraphdb');
 const path = require('path');
 
 // Movie data from the original in-memory store
@@ -67,6 +68,11 @@ const ACTED_IN_RELATIONSHIPS = [
   { from: 'Al Pacino', to: 'The Devil\'s Advocate', roles: ['John Milton'] },
 ];
 
+// Helper function to escape single quotes in Cypher strings
+function escapeCypherString(str) {
+  return str.replace(/'/g, "\\'");
+}
+
 async function seedDatabase(dbPath = './movies.cgraph') {
   console.log('Seeding CongraphDB with movies dataset...');
   console.log(`Database path: ${dbPath}`);
@@ -74,67 +80,62 @@ async function seedDatabase(dbPath = './movies.cgraph') {
   // Initialize database
   const db = new Database(dbPath);
   await db.init();
-  const api = new CongraphDBAPI(db);
+  const conn = db.createConnection();
 
   try {
     // Check if data already exists
-    const existingMovies = await api.getNodesByLabel('Movie');
-    if (existingMovies.length > 0) {
-      console.log(`Database already contains ${existingMovies.length} movies. Skipping seed.`);
-      await api.close();
+    const checkResult = await conn.query("MATCH (m:Movie) RETURN count(*) AS count");
+    const checkRows = await checkResult.getAll();
+    const count = checkRows[0]?.count || 0;
+
+    if (count > 0) {
+      console.log(`Database already contains ${count} movies. Skipping seed.`);
       await db.close();
       return;
     }
 
     // Create movie nodes
     console.log('\nCreating movie nodes...');
-    const movieMap = new Map();
     for (const movie of MOVIES) {
-      const node = await api.createNode('Movie', {
-        title: movie.title,
-        tagline: movie.tagline,
-        released: movie.released,
-        votes: 0
-      });
-      movieMap.set(movie.title, node._id);
+      const tagline = escapeCypherString(movie.tagline);
+      const title = escapeCypherString(movie.title);
+      const query = `CREATE (m:Movie {title: '${title}', tagline: '${tagline}', released: ${movie.released}, votes: 0})`;
+      await conn.query(query);
       console.log(`  Created: ${movie.title}`);
     }
 
     // Create person nodes
     console.log('\nCreating person nodes...');
-    const personMap = new Map();
     for (const person of PEOPLE) {
-      const node = await api.createNode('Person', {
-        name: person.name,
-        born: person.born
-      });
-      personMap.set(person.name, node._id);
+      const name = escapeCypherString(person.name);
+      const query = `CREATE (p:Person {name: '${name}', born: ${person.born}})`;
+      await conn.query(query);
       console.log(`  Created: ${person.name}`);
     }
 
     // Create ACTED_IN relationships
     console.log('\nCreating ACTED_IN relationships...');
     for (const rel of ACTED_IN_RELATIONSHIPS) {
-      const personId = personMap.get(rel.from);
-      const movieId = movieMap.get(rel.to);
-      if (personId && movieId) {
-        await api.createEdge(personId, 'ACTED_IN', movieId, {
-          roles: rel.roles
-        });
-        console.log(`  ${rel.from} -[ACTED_IN]-> ${rel.to}`);
-      }
+      const fromName = escapeCypherString(rel.from);
+      const toTitle = escapeCypherString(rel.to);
+      const rolesArray = `[${rel.roles.map(r => `'${escapeCypherString(r)}'`).join(', ')}]`;
+      const query = `
+        MATCH (p:Person {name: '${fromName}'}), (m:Movie {title: '${toTitle}'})
+        CREATE (p)-[r:ACTED_IN {roles: ${rolesArray}}]->(m)
+      `;
+      await conn.query(query);
+      console.log(`  ${rel.from} -[ACTED_IN]-> ${rel.to}`);
     }
 
     console.log('\n=== Seed Complete ===');
-    console.log(`Movies: ${movieMap.size}`);
-    console.log(`People: ${personMap.size}`);
+    console.log(`Movies: ${MOVIES.length}`);
+    console.log(`People: ${PEOPLE.length}`);
     console.log(`Relationships: ${ACTED_IN_RELATIONSHIPS.length}`);
 
   } catch (error) {
     console.error('Error seeding database:', error);
     throw error;
   } finally {
-    await api.close();
     await db.close();
     console.log('\nDatabase closed.');
   }

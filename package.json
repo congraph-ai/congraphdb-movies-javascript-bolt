@@ -11,6 +11,7 @@
     "lodash": "^4.17.21"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "css-loader": "^6.10.0",
     "file-loader": "^6.2.0",
     "html-webpack-plugin": "^5.5.0",
@@ -23,7 +24,13 @@
   "scripts": {
     "clean": "rimraf build",
     "build": "webpack",
+    "seed": "node scripts/seed-database.js",
     "start": "node server.js",
-    "dev": "npm run build && node server.js"
+    "start:cypher": "cross-env CONGRAPHDB_API_MODE=cypher node server.js",
+    "start:js": "cross-env CONGRAPHDB_API_MODE=javascript node server.js",
+    "dev": "npm run build && node server.js",
+    "dev:cypher": "npm run build && cross-env CONGRAPHDB_API_MODE=cypher node server.js",
+    "dev:js": "npm run build && cross-env CONGRAPHDB_API_MODE=javascript node server.js",
+    "dev:seed": "npm run seed && npm run dev"
   }
 }

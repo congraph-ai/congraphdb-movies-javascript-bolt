@@ -1,6 +1,10 @@
 /**
  * Initialize CongraphDB schema for Movies database
  *
+ * NOTE: This script uses Cypher queries which require explicit schema creation.
+ * For the JavaScript API approach, use seed-database.js instead which handles
+ * schema dynamically.
+ *
  * Run this script once to create the database schema:
  *   node scripts/init-schema.js
  */
