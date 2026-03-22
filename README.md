@@ -176,18 +176,6 @@ This allows:
 - Testing when JavaScript API is fixed in future versions
 - Unified interface for database operations
 
-## Known Issues
-
-### JavaScript API Node ID Handling (Bug #5)
-
-The `CongraphDBAPI.createNode()` method returns nodes without a usable `_id` property in v0.1.6. This breaks edge creation and node updates in the JavaScript API.
-
-**Workaround**: Use Raw Cypher mode (default)
-**Status**: Logged in [BUGS.md](../../.notes/congraph-ai/congraphdb/v0.1.6_bugs/BUGS.md)
-**Target Fix**: v0.1.7
-
-See [plan_03.md](../../.notes/congraph-ai/congraphdb-movies-javascript-bolt/plan_03.md) for migration details.
-
 ## Configuration
 
 Configuration is done via environment variables:
