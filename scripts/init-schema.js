@@ -51,36 +51,54 @@ async function initSchema() {
 
     // Create Acted_in relationship table
     await conn.query(`
-      CREATE REL TABLE Acted_in(
+      CREATE REL TABLE ACTED_IN(
         FROM Person TO Movie,
-        roles STRING_LIST
+        roles array<STRING>
       )
     `);
-    console.log('  - Created Acted_in relationship table');
+    console.log('  - Created ACTED_IN relationship table');
 
     // Create Directed relationship table
     await conn.query(`
-      CREATE REL TABLE Directed(
+      CREATE REL TABLE DIRECTED(
         FROM Person TO Movie
       )
     `);
-    console.log('  - Created Directed relationship table');
+    console.log('  - Created DIRECTED relationship table');
 
     // Create Produced relationship table
     await conn.query(`
-      CREATE REL TABLE Produced(
+      CREATE REL TABLE PRODUCED(
         FROM Person TO Movie
       )
     `);
-    console.log('  - Created Produced relationship table');
+    console.log('  - Created PRODUCED relationship table');
 
     // Create Wrote relationship table
     await conn.query(`
-      CREATE REL TABLE Wrote(
+      CREATE REL TABLE WROTE(
         FROM Person TO Movie
       )
     `);
-    console.log('  - Created Wrote relationship table');
+    console.log('  - Created WROTE relationship table');
+
+    // Create FOLLOWS relationship table
+    await conn.query(`
+      CREATE REL TABLE FOLLOWS(
+        FROM Person TO Person
+      )
+    `);
+    console.log('  - Created FOLLOWS relationship table');
+
+    // Create REVIEWED relationship table
+    await conn.query(`
+      CREATE REL TABLE REVIEWED(
+        FROM Person TO Movie,
+        rating INTEGER,
+        summary STRING
+      )
+    `);
+    console.log('  - Created REVIEWED relationship table');
 
     console.log('Schema created successfully!');
     console.log('Now run: node scripts/seed-data.js');

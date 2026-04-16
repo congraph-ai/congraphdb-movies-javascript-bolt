@@ -7,94 +7,50 @@ const { createDbAdapter } = require('./lib/db-adapter');
 
 const app = express();
 
-// Movie data for inline seeding
-const MOVIES = [
-  { title: 'The Matrix', tagline: 'Welcome to the Real World', released: 1999 },
-  { title: 'The Matrix Reloaded', tagline: 'Free your mind', released: 2003 },
-  { title: 'The Matrix Revolutions', tagline: 'Everything that has a beginning has an end', released: 2003 },
-  { title: 'The Devil\'s Advocate', tagline: 'Evil has its winning ways', released: 1997 },
-  { title: 'The Da Vinci Code', tagline: 'Break the code', released: 2006 },
-  { title: 'V for Vendetta', tagline: 'Freedom! Forever!', released: 2006 },
-  { title: 'Speed Racer', tagline: 'Speed has no limits', released: 2008 },
-  { title: 'Ninja Assassin', tagline: 'Prepare to enter a secret world of assassins', released: 2009 },
-  { title: 'The Green Mile', tagline: 'Walking a mile in another man\'s shoes.', released: 1999 },
-  { title: 'The Replacements', tagline: 'Pain heals, chicks dig scars, glory lasts forever', released: 2000 },
-  { title: 'Top Gun', tagline: 'I feel the need, the need for speed', released: 1986 },
-  { title: 'A Few Good Men', tagline: 'In the heart of the nation\'s capital, in a courthouse of the U.S. government, one man will stop at nothing to keep his honor, and one will stop at nothing to find the truth.', released: 1992 },
-  { title: 'Jerry Maguire', tagline: 'The rest of his life begins now.', released: 1996 },
-  { title: 'Stand By Me', tagline: 'For some, it\'s the last real taste of innocence, and the first real taste of life.', released: 1986 },
-  { title: 'As Good as It Gets', tagline: 'A comedy from the heart that goes for the throat.', released: 1997 },
-  { title: 'What Dreams May Come', tagline: 'After death there is life.', released: 1998 },
-  { title: 'Snow Falling on Cedars', tagline: 'First loves last. True loves never die.', released: 1999 },
-];
+const fs = require('fs');
 
-const PEOPLE = [
-  { name: 'Keanu Reeves', born: 1964 },
-  { name: 'Carrie-Anne Moss', born: 1967 },
-  { name: 'Laurence Fishburne', born: 1961 },
-  { name: 'Hugo Weaving', born: 1960 },
-  { name: 'Lana Wachowski', born: 1965 },
-  { name: 'Lilly Wachowski', born: 1967 },
-  { name: 'Joel Silver', born: 1952 },
-  { name: 'Tom Hanks', born: 1956 },
-  { name: 'Al Pacino', born: 1940 },
-  { name: 'Charlize Theron', born: 1975 },
-  { name: 'Gene Hackman', born: 1930 },
-  { name: 'Tom Cruise', born: 1962 },
-  { name: 'Meg Ryan', born: 1961 },
-  { name: 'Jack Nicholson', born: 1937 },
-];
-
-const ACTED_IN_RELATIONSHIPS = [
-  { from: 'Keanu Reeves', to: 'The Matrix', roles: ['Neo'] },
-  { from: 'Keanu Reeves', to: 'The Matrix Reloaded', roles: ['Neo'] },
-  { from: 'Keanu Reeves', to: 'The Matrix Revolutions', roles: ['Neo'] },
-  { from: 'Keanu Reeves', to: 'The Devil\'s Advocate', roles: ['Kevin Lomax'] },
-  { from: 'Carrie-Anne Moss', to: 'The Matrix', roles: ['Trinity'] },
-  { from: 'Carrie-Anne Moss', to: 'The Matrix Reloaded', roles: ['Trinity'] },
-  { from: 'Carrie-Anne Moss', to: 'The Matrix Revolutions', roles: ['Trinity'] },
-  { from: 'Laurence Fishburne', to: 'The Matrix', roles: ['Morpheus'] },
-  { from: 'Laurence Fishburne', to: 'The Matrix Reloaded', roles: ['Morpheus'] },
-  { from: 'Laurence Fishburne', to: 'The Matrix Revolutions', roles: ['Morpheus'] },
-  { from: 'Hugo Weaving', to: 'The Matrix', roles: ['Agent Smith'] },
-  { from: 'Hugo Weaving', to: 'The Matrix Reloaded', roles: ['Agent Smith'] },
-  { from: 'Hugo Weaving', to: 'The Matrix Revolutions', roles: ['Agent Smith'] },
-  { from: 'Hugo Weaving', to: 'V for Vendetta', roles: ['V'] },
-  { from: 'Tom Hanks', to: 'The Green Mile', roles: ['Paul Edgecomb'] },
-  { from: 'Tom Hanks', to: 'The Da Vinci Code', roles: ['Robert Langdon'] },
-  { from: 'Al Pacino', to: 'The Devil\'s Advocate', roles: ['John Milton'] },
-];
+// Load movie data from JSON file
+const MOVIE_DATA_PATH = path.join(__dirname, 'scripts', 'movie_data.json');
+let MOVIE_DATA = { MOVIES: [], PEOPLE: [], RELATIONSHIPS: {} };
+if (fs.existsSync(MOVIE_DATA_PATH)) {
+  MOVIE_DATA = JSON.parse(fs.readFileSync(MOVIE_DATA_PATH, 'utf8'));
+}
 
 async function seedDatabaseInline(adapter) {
   console.log('\nCreating movie nodes...');
-  for (const movie of MOVIES) {
+  for (const movie of MOVIE_DATA.MOVIES) {
     await adapter.createNode('Movie', { ...movie, votes: 0 });
-    console.log(`  Created: ${movie.title}`);
   }
 
   console.log('\nCreating person nodes...');
-  for (const person of PEOPLE) {
+  for (const person of MOVIE_DATA.PEOPLE) {
     await adapter.createNode('Person', person);
-    console.log(`  Created: ${person.name}`);
   }
 
-  console.log('\nCreating ACTED_IN relationships...');
-  for (const rel of ACTED_IN_RELATIONSHIPS) {
-    const personNode = await adapter.getNodeByProperty('Person', 'name', rel.from);
-    const movieNode = await adapter.getNodeByProperty('Movie', 'title', rel.to);
-    if (personNode && movieNode) {
-      await adapter.query(`
-        MATCH (p:Person {name: '${adapter.escapeCypher(rel.from)}'}), (m:Movie {title: '${adapter.escapeCypher(rel.to)}'})
-        CREATE (p)-[r:ACTED_IN {roles: [${rel.roles.map(r => `'${adapter.escapeCypher(r)}'`).join(', ')}]}]->(m)
-      `);
-      console.log(`  ${rel.from} -[ACTED_IN]-> ${rel.to}`);
+  console.log('\nCreating relationships...');
+  for (const [relType, rels] of Object.entries(MOVIE_DATA.RELATIONSHIPS)) {
+    if (rels.length === 0) continue;
+    console.log(`  Adding ${rels.length} ${relType} relationships...`);
+    
+    for (const rel of rels) {
+      if (!rel.from || !rel.to) continue;
+      
+      let propsStr = '';
+      if (relType === 'ACTED_IN' && rel.roles) {
+        propsStr = `{roles: [${rel.roles.map(r => `'${adapter.escapeCypher(r)}'`).join(', ')}]}`;
+      } else if (relType === 'REVIEWED') {
+        propsStr = `{summary: '${adapter.escapeCypher(rel.summary || '')}', rating: ${parseInt(rel.rating) || 0}}`;
+      }
+
+      const query = (relType === 'FOLLOWS') ?
+        `MATCH (p1:Person {name: '${adapter.escapeCypher(rel.from)}'}), (p2:Person {name: '${adapter.escapeCypher(rel.to)}'}) CREATE (p1)-[:FOLLOWS]->(p2)` :
+        `MATCH (p:Person {name: '${adapter.escapeCypher(rel.from)}'}), (m:Movie {title: '${adapter.escapeCypher(rel.to)}'}) CREATE (p)-[:${relType} ${propsStr}]->(m)`;
+      
+      await adapter.query(query);
     }
   }
 
   console.log('\n=== Seed Complete ===');
-  console.log(`Movies: ${MOVIES.length}`);
-  console.log(`People: ${PEOPLE.length}`);
-  console.log(`Relationships: ${ACTED_IN_RELATIONSHIPS.length}\n`);
 }
 const PORT = 3505;
 
@@ -172,14 +128,21 @@ async function startServer() {
 
         for (const person of people) {
           const outgoingEdges = await adapter.getOutgoingEdges('Person', 'name', person.name);
-          const actedInRels = outgoingEdges.filter(e => e._type === 'ACTED_IN' || e.label === 'ACTED_IN');
-
-          for (const rel of actedInRels) {
+          
+          for (const rel of outgoingEdges) {
+            const relType = rel._type || rel.label || rel.relType || '';
             const targetMovie = rel.toNode || await adapter.getNodeByProperty('Movie', '_id', rel.to);
+            
             if (targetMovie && targetMovie.title === title) {
+              let job = 'acted';
+              if (relType === 'DIRECTED') job = 'directed';
+              if (relType === 'PRODUCED') job = 'produced';
+              if (relType === 'WROTE') job = 'wrote';
+              if (relType === 'REVIEWED') job = 'reviewed';
+
               cast.push({
                 name: person.name,
-                job: 'acted',
+                job: job,
                 role: rel.roles && rel.roles.length > 0 ? rel.roles[0] : ''
               });
             }
@@ -244,17 +207,14 @@ async function startServer() {
             personIndexMap.set(person.name, source);
           }
 
-          // Find ACTED_IN relationships
+          // Find all relationships to movies
           const outgoingEdges = await adapter.getOutgoingEdges('Person', 'name', person.name);
           for (const edge of outgoingEdges) {
-            const relType = edge._type || edge.label || edge.relType;
-            if (relType === 'ACTED_IN') {
-              const targetMovie = edge.toNode || await adapter.getNodeByProperty('Movie', '_id', edge.to);
-              if (targetMovie) {
-                const target = movieIndexMap.get(targetMovie.title);
-                if (target !== undefined) {
-                  rels.push({ source, target });
-                }
+            const targetMovie = edge.toNode || await adapter.getNodeByProperty('Movie', '_id', edge.to);
+            if (targetMovie) {
+              const target = movieIndexMap.get(targetMovie.title);
+              if (target !== undefined) {
+                rels.push({ source, target });
               }
             }
           }
