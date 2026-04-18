@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "private": true,
   "dependencies": {
-    "congraphdb": "file:../congraphdb",
+    "congraphdb": "^0.1.13",
     "express": "^4.22.1",
     "lodash": "^4.17.21"
   },
